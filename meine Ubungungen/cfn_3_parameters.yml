@@ -1,0 +1,124 @@
+--- 
+AWSTemplateFormatVersion: 2010-09-09
+Description: RDS Storage Encrypted
+Parameters:
+  DBClass:
+     Type: String
+     Description: RDS Instance class
+     Default: db.t2.medium
+     AllowedValues:
+      - db.t2.micro
+      - db.t3.small
+      - db.t2.medium
+     
+  MasterUserName:
+     Type: String
+     MaxLength: 10
+     AllowedPattern: "[a-zA-Z][a-zA-Z0-9]*"
+     Description: Master Username for the db instance
+     NoEcho: true
+    
+  
+  MasterPassword:
+     Type: String
+     MinLength: 8
+     Description: Master Password for the db instance 
+     NoEcho: true
+   
+  MultiAZ:
+     Type: String
+     Default: false
+     AllowedValues:
+      - true
+      - false  
+     Description: Enable Multi AZ
+
+  AllocatedStorage:
+     Type: Number
+     Description: Database Storage size in GB 
+     MinValue: 8
+     MaxValue: 20
+     ConstraintDescription: Allowed Constrained values between 8 and 20 
+
+  SecurityGroupPorts:
+     Type: List<Number>
+     Description: "Port Number List <web-server-port>,<database-port>"
+     Default: "80,3306"
+  
+  DBSubnets:
+     Type: List<AWS::EC2::Subnet::Id>
+     Description: "Subnet ids <1><2><3>"
+  
+  InstanceImageIds:
+     Type: AWS::EC2::Image::Id
+     Description: "Image IDS"
+
+  VpcID:
+    Type: AWS::EC2::VPC::Id
+    Description: A valid VPC in your AWS account! 
+
+Resources:
+
+  Bastion:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref InstanceImageIds
+      InstanceType: t2.micro
+      SubnetId: !Select [0,!Ref DBSubnets]
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-BastionHost'
+ 
+
+  WebDBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Web Server Security Group
+      VpcId: !Ref VpcID
+      SecurityGroupIngress:
+        - IpProtocol: tcp   # Du musst hier beachten,ob es irgenwelche Fehlermeldung vorkommt.
+          FromPort: !Select [0,!Ref SecurityGroupPorts] # Das Entwurf code ist wichtig.
+          ToPort: !Select [ 0, !Ref SecurityGroupPorts ]
+          CidrIp: 0.0.0.0/0
+
+  DBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: DB Security Group
+      VpcId: vpc-2524945c
+      SecurityGroupIngress:
+        - IpProtocol: tcp   # Du musst hier beachten,ob es irgenwelche Fehlermeldung vorkommt.
+          FromPort: !Select [ 1, !Ref SecurityGroupPorts ]
+          ToPort: !Select [ 1, !Ref SecurityGroupPorts ]
+          CidrIp: 0.0.0.0/0
+
+
+  DBSubnetGroup: 
+    Type: "AWS::RDS::DBSubnetGroup"
+    Properties: 
+      DBSubnetGroupDescription: Subnets to launch db instances into
+      SubnetIds: !Ref DBSubnets
+
+  MyDBSmall:
+      Type: AWS::RDS::DBInstance
+      Properties: 
+        AllocatedStorage: !Ref AllocatedStorage
+        AutoMinorVersionUpgrade: true
+        DBInstanceClass: !Ref DBClass
+        DBName: MehmetDB
+        DBSubnetGroupName: !Ref DBSubnetGroup
+        Engine: mariadb
+        MasterUsername: !Ref MasterUserName
+        MasterUserPassword: !Ref MasterPassword
+        MultiAZ: !Ref MultiAZ
+        PubliclyAccessible: true
+        VPCSecurityGroups: 
+          - !Ref DBSecurityGroup
+
+
+
+
+
+
+
+  

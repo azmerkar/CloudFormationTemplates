@@ -1,0 +1,92 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: This is the Udemy Exmple with VPC,InternetGateway,Routing Table ,EC2 Instance and Security Groups
+Resources:
+
+  myInternetGateway:
+    Type: AWS::EC2::InternetGateway
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref myVPC
+      InternetGatewayId: !Ref myInternetGateway
+
+   
+  myVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      Tags:
+      - Key: stack
+        Value: production
+
+  myRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref myVPC
+
+  myRoute:
+    Type: AWS::EC2::Route
+    DependsOn: myInternetGateway
+    Properties:
+       RouteTableId: !Ref myRouteTable
+       DestinationCidrBlock: 0.0.0.0/0
+       GatewayId: !Ref myInternetGateway
+    
+
+  mySubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref myVPC
+      CidrBlock: 10.0.0.0/24
+      MapPublicIpOnLaunch: true
+
+  ActivitySubnetRouteTableAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref myRouteTable
+      SubnetId: !Ref mySubnet
+
+
+
+        
+  # myWebServerInstance:
+  #   Type: AWS::EC2::Instance
+  #   DependsOn: 
+  #     - myRoute 
+  #     - ActivitySubnetRouteTableAssoc
+  #   Properties: 
+  #     ImageId: ami-0fad7378adf284ce0
+  #     InstanceType: t2.micro
+  #     SubnetId: !Ref mySubnet
+  #     SecurityGroupIds:
+  #       - !Ref mySecurityGroup
+
+  ActivityInstance:
+    Type: AWS::EC2::Instance 
+    DependsOn:
+      - myRoute
+      - ActivitySubnetRouteTableAssoc
+    Properties:
+      InstanceType: t2.micro
+      SubnetId: !Ref mySubnet 
+      ImageId: ami-0fad7378adf284ce0
+      SecurityGroupIds:
+        - !Ref mySecurityGroup
+
+  mySecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security Group for web servers
+      VpcId: !Ref myVPC
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 80
+        ToPort: 80
+        CidrIp: 0.0.0.0/0
+
+
+
+
+
+      

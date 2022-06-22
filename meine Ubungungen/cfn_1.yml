@@ -1,0 +1,39 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description:  My template in CloudFormationcourse 
+    
+Resources:
+  myWebServerInstance:
+    Type: AWS::EC2::Instance
+    Properties: 
+      ImageId: ami-0c1bc246476a5572b
+      InstanceType: t2.micro
+      SecurityGroupIds:
+        - !Ref mySecurityGroup
+      Tags:
+        -
+          Key: Name
+          Value: Webserver
+
+        - Key: Project
+          Value: Cloudformation
+      
+  
+  mySecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security Group for web servers
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 80
+        ToPort: 80
+        CidrIp: 0.0.0.0/0
+      Tags:
+        -
+          Key: Name
+          Value: Webserver Security Group
+
+  mySQS:
+    Type: AWS::SQS::Queue
+    DependsOn: myWebServerInstance        
+
+   
